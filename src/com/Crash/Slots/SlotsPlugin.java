@@ -4,13 +4,20 @@ import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.bukkit.block.Block;
+import org.bukkit.block.Chest;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
+import org.bukkit.event.block.BlockListener;
+import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.EntityListener;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerListener;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.util.config.Configuration;
 
 import com.nijiko.permissions.PermissionHandler;
 
@@ -18,7 +25,9 @@ public class SlotsPlugin extends JavaPlugin {
 
 	private static Logger log = Logger.getLogger("Minecraft");
 	private static SlotsPlugin staticPlugin = null;
-	private ArrayList<SlotRoll> rollList = new ArrayList<SlotRoll>();
+	private SlotDataHandler DataHandler = null;
+	private SlotSettings Settings = null;
+	private SlotsEconomyHandler EconomyHandler = null;
 	private PermissionHandler Permissions = null;
 	
 	public static void outConsole(String s){
@@ -39,6 +48,12 @@ public class SlotsPlugin extends JavaPlugin {
 		
 		staticPlugin = this;
 		
+		DataHandler = new SlotDataHandler();
+		
+		Settings = new SlotSettings();
+		
+		EconomyHandler = new SlotsEconomyHandler();
+		
 		PluginManager pm = getServer().getPluginManager();
 		
 		Plugin PermissionsPlugin = pm.getPlugin("Permissions");
@@ -52,11 +67,15 @@ public class SlotsPlugin extends JavaPlugin {
 			
 		}
 		
-		outConsole("Slots v" + getServer().getVersion() + " enabled, by Crash");
+		outConsole("Slots v" + getDescription().getVersion() + " enabled, by Crash");
 		
 	}
 	
-	public ArrayList<SlotRoll> getRolls(){ return rollList; }
+	public SlotDataHandler getDataHandler(){ return DataHandler; } 
+	
+	public SlotSettings getSettings(){ return Settings; }
+	
+	public SlotsEconomyHandler getEconomyHandler(){ return EconomyHandler; }
 	
 	public static SlotsPlugin getStatic(){ return staticPlugin; }
 	

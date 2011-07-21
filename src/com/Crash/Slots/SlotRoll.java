@@ -36,7 +36,7 @@ public class SlotRoll {
 			
 		} else if(o instanceof SlotRoll){
 			
-			return ((SlotRoll)o).getName().equalsIgnoreCase(name);
+			return ((SlotRoll) o).getName().equalsIgnoreCase(name);
 			
 		}
 		
