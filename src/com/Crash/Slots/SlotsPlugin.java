@@ -1,6 +1,6 @@
 package com.Crash.Slots;
 
-import java.util.ArrayList;
+import java.io.File;
 import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -8,7 +8,6 @@ import java.util.logging.Logger;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.block.Chest;
 import org.bukkit.block.Sign;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -17,12 +16,8 @@ import org.bukkit.event.Event;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockListener;
-import org.bukkit.event.block.SignChangeEvent;
-import org.bukkit.event.entity.EntityDeathEvent;
-import org.bukkit.event.entity.EntityListener;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerListener;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
@@ -43,6 +38,7 @@ public class SlotsPlugin extends JavaPlugin {
 	private SlotSettings Settings = null;
 	private SlotsEconomyHandler EconomyHandler = null;
 	private PermissionHandler Permissions = null;
+	private File slotSaveFile = null, slotConfigFile = null, rollSaveFile = null;
 	
 	public static void outConsole(String s){
 		
@@ -50,8 +46,17 @@ public class SlotsPlugin extends JavaPlugin {
 		
 	}
 	
+	public static void outConsole(Level l, String s){
+		
+		log.log(l, "[Slots] " + s);
+		
+	}
+	
 	@Override
 	public void onDisable() {
+		
+		if(Settings.saveOnDisable())
+			saveAllData();
 		
 		outConsole("Slots disabled.");
 		
@@ -66,8 +71,6 @@ public class SlotsPlugin extends JavaPlugin {
 		
 		Settings = new SlotSettings();
 		
-		Settings.setSpeed(20);
-		
 		EconomyHandler = new SlotsEconomyHandler();
 		
 		BlockListener = new BListener();
@@ -78,21 +81,90 @@ public class SlotsPlugin extends JavaPlugin {
 		
 		Plugin PermissionsPlugin = pm.getPlugin("Permissions");
 		
-		if(PermissionsPlugin == null)
-			outConsole("Unable to find Permissions, using OP only.");
-		else {
+		slotSaveFile = new File("plugins/Slots/slots.yml");
+		rollSaveFile = new File("plugins/Slots/rolls.yml");
+		slotConfigFile = new File("plugins/Slots/config.yml");
+		
+		if(new File("plugins/Slots/").mkdir())
+			outConsole("Created Slots directory.");
+		
+		if(!slotSaveFile.exists())
+			try { slotSaveFile.createNewFile(); } catch(Exception e){ outConsole("Error creating slot save file."); }
 			
-			Permissions = ((com.nijikokun.bukkit.Permissions.Permissions)PermissionsPlugin).getHandler();
-			outConsole("Found and hooked Permissions plugin.");
+		if(!rollSaveFile.exists())
+			try { rollSaveFile.createNewFile(); } catch(Exception e){ outConsole("Error creating roll save file."); }
+				
+		if(!slotConfigFile.exists()){
+			
+			try { slotConfigFile.createNewFile(); } catch(Exception e){ outConsole("Error creating slot config file."); }
+			
+			if(slotConfigFile.exists()){
+				
+				Settings.loadSlotSettings(slotConfigFile);
+				Settings.saveSlotSettings(slotConfigFile);
+				
+			}
 			
 		}
+			
+		if(PermissionsPlugin == null)
+			outConsole("Unable to find Permissions, using OP only.");
+		else 
+			Permissions = ((com.nijikokun.bukkit.Permissions.Permissions)PermissionsPlugin).getHandler();
+		
+		Plugin iConomyPlugin = pm.getPlugin("iConomy");
+		
+		if(iConomyPlugin == null){
+			
+			outConsole("Unable to find iConomy, disabling.");
+			pm.disablePlugin(this);
+			return;
+			
+		} else if(PermissionsPlugin != null)
+			outConsole("Hooked iConomy and Permissions successfully.");
 		
 		getServer().getPluginManager().registerEvent(Event.Type.BLOCK_BREAK, BlockListener, Event.Priority.Normal, this);
 		getServer().getPluginManager().registerEvent(Event.Type.PLAYER_INTERACT, PlayerListener, Event.Priority.Normal, this);
 		
+		loadAllData();
+		
+		if(DataHandler.getRollList().size() == 0){
+			
+			log.log(Level.WARNING, "[Slots] The roll list is blank, you must add rolls in before starting!");
+			pm.disablePlugin(this);
+			return;
+			
+		}
+		
 		outConsole("Slots v" + getDescription().getVersion() + " enabled, by Crash");
 		
 	}
+	
+	public void loadAllData(){
+		
+		DataHandler.loadSlotData(slotSaveFile);
+		DataHandler.loadRollData(rollSaveFile);
+		Settings.loadSlotSettings(slotConfigFile);
+		
+		outConsole("All data loaded.");
+		
+	}
+	
+	public void saveAllData(){
+		
+		DataHandler.saveSlotData(slotSaveFile);
+		DataHandler.saveRollData(rollSaveFile);
+		Settings.saveSlotSettings(slotConfigFile);
+		
+		outConsole("All data saved.");
+		
+	}
+	
+	public File getSlotDataFile(){ return slotSaveFile; }
+	
+	public File getRollDataFile(){ return rollSaveFile; }
+	
+	public File getSlotConfigFile(){ return slotConfigFile; }
 	
 	public SlotDataHandler getDataHandler(){ return DataHandler; } 
 	
@@ -196,6 +268,41 @@ public class SlotsPlugin extends JavaPlugin {
 			playerState.put(player.getName(), state);
 			
 			player.sendMessage(ChatColor.GREEN + "Left click a slot machine to withdraw money from it.");
+			
+		} else if(args[0].equals("save")){
+			
+			if(!has(player, "slots.save")){
+				
+				player.sendMessage(ChatColor.RED + "You aren't allowed to save data!");
+				return false;
+				
+			}
+			
+			saveAllData();
+			player.sendMessage(ChatColor.GREEN + "Saved data successfully.");
+			
+		} else if(args[0].equals("reload")){
+			
+			if(!has(player, "slots.reload")){
+				
+				player.sendMessage(ChatColor.RED + "You aren't allowed to reload data!");
+				return false;
+				
+			}
+			
+			loadAllData();
+			player.sendMessage(ChatColor.GREEN + "Loaded data successfully.");
+			
+		} else if(args[0].equals("help") || args[0].equals("?") || args[0].equals("h")){
+			
+			player.sendMessage(ChatColor.GOLD + "======= Slots v" + getDescription().getVersion() + " =======");
+			player.sendMessage(ChatColor.GOLD + "/slots create (server)");
+			player.sendMessage(ChatColor.GOLD + "/slots delete");
+			player.sendMessage(ChatColor.GOLD + "/slots info");
+			player.sendMessage(ChatColor.GOLD + "/slots deposit <amount>");
+			player.sendMessage(ChatColor.GOLD + "/slots withdraw <amount>");
+			player.sendMessage(ChatColor.GOLD + "/slots save");
+			player.sendMessage(ChatColor.GOLD + "/slots load");
 			
 		}
 		
@@ -329,12 +436,22 @@ class PListener extends PlayerListener {
 					else
 						plugin.getDataHandler().addSlotMachine(null, pay, 0, block);
 					
+					if(plugin.getSettings().saveOnSlotChange())
+						plugin.getDataHandler().saveSlotData(plugin.getSlotDataFile());
+					
 					event.getPlayer().sendMessage(ChatColor.GREEN + "The slot machine was successfully created!");
 					
 					sign.setLine(0, ChatColor.YELLOW + "[Slots]");
 					sign.update();
 					
 				} else if(state == PlayerState.DELETE){
+					
+					if(!plugin.has(event.getPlayer(), "slots.delete")){
+						
+						event.getPlayer().sendMessage(ChatColor.RED + "You aren't allowed to delete slot machines!");
+						return;
+						
+					}
 					
 					if(!m.isOwner(event.getPlayer())){
 						
@@ -349,9 +466,19 @@ class PListener extends PlayerListener {
 					block.setTypeId(0);
 					block.getWorld().dropItem(block.getLocation().add(0.5, 0.5, 0.5), new ItemStack(323, 1));
 					
+					if(plugin.getSettings().saveOnSlotChange())
+						plugin.getDataHandler().saveSlotData(plugin.getSlotDataFile());
+					
 				} else if(state == PlayerState.INFO){
 					
 					Player p = event.getPlayer();
+					
+					if(!plugin.has(p, "slots.withdraw")){
+						
+						p.sendMessage(ChatColor.RED + "You aren't allowed to get info on slot machines!");
+						return;
+						
+					}
 					
 					if(m.isOwned()){
 					
@@ -371,6 +498,13 @@ class PListener extends PlayerListener {
 				} else if(state == PlayerState.DEPOSIT){
 					
 					double amount = state.getVal();
+					
+					if(!plugin.has(event.getPlayer(), "slots.deposit")){
+						
+						event.getPlayer().sendMessage(ChatColor.RED + "You aren't allowed to deposit!");
+						return;
+						
+					}
 					
 					if(!m.isOwned()){
 						
@@ -402,6 +536,13 @@ class PListener extends PlayerListener {
 				} else if(state == PlayerState.WITHDRAW){
 					
 					double amount = state.getVal();
+					
+					if(!plugin.has(event.getPlayer(), "slots.withdraw")){
+						
+						event.getPlayer().sendMessage(ChatColor.RED + "You aren't allowed to withdraw!");
+						return;
+						
+					}
 					
 					if(!m.isOwned()){
 						

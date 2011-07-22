@@ -1,8 +1,15 @@
 package com.Crash.Slots;
 
+import java.io.*;
 import java.util.ArrayList;
+import java.util.List;
 
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.Sign;
+import org.bukkit.util.config.Configuration;
 
 public class SlotDataHandler {
 
@@ -13,10 +20,6 @@ public class SlotDataHandler {
 	public SlotDataHandler(){
 		
 		plugin = SlotsPlugin.getStatic();
-		
-		addSlotRoll("nigga", "n", 5, 1, 2, 3);
-		
-		addSlotRoll("NIGGUH", "N", 10, 1, 2, 2);
 		
 	}
 	
@@ -76,6 +79,182 @@ public class SlotDataHandler {
 	private void addSlotRoll(String name, String symbol, double pay, int chancenum, int chanceden, int color){
 		
 		rollList.add(new SlotRoll(name, symbol, pay, chancenum, chanceden, color));
+		
+	}
+	
+	public void saveSlotData(File file){
+		
+		int slotNum = 0;
+		
+		Configuration config = new Configuration(file);
+		
+		for(SlotMachine machine : machineList){
+			
+			String key = "machines." + slotNum + ".";
+			
+			Object[] list = new Object[4];
+			
+			list[0] = machine.getBlock().getWorld().getName();
+			list[1] = machine.getBlock().getX();
+			list[2] = machine.getBlock().getY();
+			list[3] = machine.getBlock().getZ();
+			
+			config.setProperty(key + "loc", list);
+			config.setProperty(key + "owner", machine.getOwner());
+			config.setProperty(key + "uses", machine.getUses());
+			config.setProperty(key + "amount", machine.getAmount());
+			
+			slotNum += 1;
+			
+		}
+		
+		config.save();
+		
+	}
+	
+	public void loadSlotData(File file){
+		
+		Configuration config = new Configuration(file);
+		
+		config.load();
+		
+		List<String> keys = config.getKeys("machines");
+		
+		for(String key : keys){
+			
+			try {
+			
+				double amount, cost = 0;
+				int x, y, z, uses;
+				String worldname, owner;
+				
+				List<Object> loc = config.getList("machines." + key + ".loc");
+				
+				worldname = (String)loc.get(0);
+				
+				World world = plugin.getServer().getWorld(worldname);
+				
+				x = (Integer)loc.get(1);
+				y = (Integer)loc.get(2);
+				z = (Integer)loc.get(3);
+				uses = config.getInt("machines." + key + ".uses", 0);
+				owner = config.getString("machines." + key + ".owner");
+				if(owner != null && owner.isEmpty())
+					owner = null;
+				amount = config.getDouble("machines." + key + ".amount", 0);
+				
+				Block block = new Location(world, x, y, z).getBlock();
+				
+				if(block.getType() != Material.SIGN_POST && block.getType() != Material.WALL_SIGN){
+					
+					System.out.println("[Slots] Error key " + key + " is not a sign!");
+					continue;
+					
+				}
+				
+				try {
+					
+					String line = ((Sign)block.getState()).getLine(1);
+					cost = Double.parseDouble(line);
+					
+				} catch(NumberFormatException e){
+					
+					System.out.println("[Slots] Error with key " + key + " getting cost.");
+					continue;
+					
+				}
+				
+				SlotMachine machine = new SlotMachine(owner, amount, cost, uses, block);
+				
+				machineList.add(machine);
+				
+			} catch(Exception e){
+				
+				System.out.println("[Slots] Error when loading slot data at key : " + key + ".");
+				
+			}
+			
+		}
+		
+	}
+	
+	public void loadRollData(File file){
+		
+		Configuration config = new Configuration(file);
+		
+		config.load();
+		
+		List<String> keys = config.getKeys();
+		
+		for(String key : keys){
+			
+			try {
+			
+				String name = key, symbol;
+				int num, den, color;
+				double pay;
+				
+				symbol = config.getString(key + ".symbol");
+				if(symbol == null){
+					
+					System.out.println("[Slots] Roll " + key + " is missing a symbol value.");
+					continue;
+					
+				}
+				String fraction = config.getString(key + ".chance");
+				if(fraction == null){
+					
+					System.out.println("[Slots] Roll " + key + " is missing a chance value.");
+					continue;
+					
+				}
+				String[] split = fraction.split("/");
+				num = Integer.parseInt(split[0]);
+				den = Integer.parseInt(split[1]);
+				color = config.getInt(key + ".color", -1);
+				if(color == -1){
+					
+					System.out.println("[Slots] Roll " + key + " is missing a color value.");
+					continue;
+					
+				}
+				
+				pay = config.getDouble(key + ".pay", -1);
+				if(pay == -1){
+					
+					System.out.println("[Slots Roll " + key + " is missing a pay value.");
+					continue;
+					
+				}
+				
+				addSlotRoll(name, symbol, pay, num, den, color);
+				
+			} catch(Exception e){
+				
+				System.out.println("[Slots] Error while loading roll " + key + ".");
+				
+			}
+			
+		}
+		
+	}
+	
+	public void saveRollData(File file){
+		
+		Configuration config = new Configuration(file);
+		
+		for(SlotRoll roll : rollList){
+			
+			String name = roll.getName();
+			
+			config.setProperty(name + ".symbol", roll.getSymbol());
+			config.setProperty(name + ".chance", roll.getNumerator() + "/" + roll.getDenominator());
+			config.setProperty(name + ".color", roll.getColorCode());
+			config.setProperty(name + ".pay", roll.getPay());
+			
+		}
+		
+		config.save();
 		
 	}
 	

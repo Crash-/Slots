@@ -1,5 +1,7 @@
 package com.Crash.Slots;
 
+import java.util.logging.Level;
+
 import org.bukkit.ChatColor;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.Player;
@@ -126,9 +128,21 @@ public class SlotRoller implements Runnable {
 			
 			SlotRoll roll = generateRoll();
 			
+			if(roll == null){
+				
+				roller.sendMessage(ChatColor.RED + "There was no roll to match the random value, so the machine stopped. You've been refunded your money.");
+				SlotsPlugin.outConsole(Level.SEVERE, "Check that the random chances of all the rolls add up to 1!");
+				SlotsEconomyHandler eco = SlotsPlugin.getStatic().getEconomyHandler();
+				eco.addAmount(roller, myMachine.getCost());
+				myMachine.subtractAmount(myMachine.getCost());
+				stopTask();
+				return;
+				
+			}
+			
 			rolls[currentRoll] = roll.getName();
 			
-			roller.sendMessage(ChatColor.GOLD + "You rolled a " + roll.getColor() + roll.getName() + ".");
+			roller.sendMessage(ChatColor.GOLD + "You rolled a(n) " + roll.getColor() + roll.getName() + ChatColor.GOLD + ".");
 			
 			updateSign();
 			
@@ -151,7 +165,7 @@ public class SlotRoller implements Runnable {
 		
 		String line = "";
 		
-		for(String roll: rolls){
+		for(String roll : rolls){
 			
 			if(roll == null){
 				

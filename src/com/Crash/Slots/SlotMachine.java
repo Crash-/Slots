@@ -50,7 +50,7 @@ public class SlotMachine {
 		
 		SlotsEconomyHandler eco = SlotsPlugin.getStatic().getEconomyHandler();
 		
-		if(amount == 0){
+		if(amount == 0 && isOwned()){
 			
 			roller.sendMessage(ChatColor.GOLD + "This slot machine has no money inside!");
 			return;
@@ -73,7 +73,7 @@ public class SlotMachine {
 		if(owner != null)
 			addAmount(cost);
 		
-		int delay = SlotsPlugin.getStatic().getSettings().getSpeed();
+		long delay = SlotsPlugin.getStatic().getSettings().getSpeed();
 		
 		slotroller.setID(SlotsPlugin.getStatic().getServer().getScheduler().scheduleSyncRepeatingTask(SlotsPlugin.getStatic(), slotroller, delay, delay));
 		
