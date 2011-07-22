@@ -1,18 +1,21 @@
 package com.Crash.Slots;
 
+import org.bukkit.ChatColor;
+
 public class SlotRoll {
 	
 	private String name, symbol;
 	private double pay;
-	private int chancenum, chanceden;
+	private int chancenum, chanceden, color;
 	
-	public SlotRoll(String Name, String Symbol, double Pay, int Chancenum, int Chanceden){
+	public SlotRoll(String Name, String Symbol, double Pay, int Chancenum, int Chanceden, int Color){
 		
 		name = Name;
 		symbol = Symbol;
 		pay = Pay;
 		chancenum = Chancenum;
 		chanceden = Chanceden;
+		color = Color;
 		
 	}
 	
@@ -27,6 +30,10 @@ public class SlotRoll {
 	public int getNumerator(){ return chancenum; }
 	
 	public int getDenominator(){ return chanceden; }
+	
+	public int getColorCode(){ return color; }
+	
+	public ChatColor getColor(){ return ChatColor.values()[color]; }
 	
 	public boolean equals(Object o){
 		

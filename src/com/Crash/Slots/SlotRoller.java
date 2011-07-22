@@ -1,7 +1,10 @@
 package com.Crash.Slots;
 
 import org.bukkit.ChatColor;
+import org.bukkit.block.Sign;
 import org.bukkit.entity.Player;
+
+import com.iConomy.iConomy;
 
 public class SlotRoller implements Runnable {
 
@@ -17,14 +20,14 @@ public class SlotRoller implements Runnable {
 		
 	}
 	
-	private String generateRoll(){
+	private SlotRoll generateRoll(){
 		
 		double chance = 0, random = Math.random();
 		
 		for(SlotRoll roll : SlotsPlugin.getStatic().getDataHandler().getRollList()){
 			
 			if(random >= chance && random < chance + roll.getChance())
-				return roll.getName();
+				return roll;
 			
 			chance += roll.getChance();
 			
@@ -62,52 +65,72 @@ public class SlotRoller implements Runnable {
 				
 				SlotsEconomyHandler eco = SlotsPlugin.getStatic().getEconomyHandler();
 				
-				if(pay > myMachine.getAmount()){
+				if(myMachine.isOwned()){
+				
+					if(pay > myMachine.getAmount()){
 					
-					if(!SlotsPlugin.getStatic().getSettings().subtractOvercost()){
-						
-						roller.sendMessage("The pay went over the machine's balance, so you only won " + myMachine.getAmount());
-						pay = myMachine.getAmount();
-						
-					} else {
-						
-						if(eco.hasEnough(myMachine.getOwner(), pay - myMachine.getAmount())){
+						if(!SlotsPlugin.getStatic().getSettings().subtractOvercost()){
 							
-							eco.subtractAmount(myMachine.getOwner(), pay - myMachine.getAmount());
-							roller.sendMessage(ChatColor.GREEN + "The pay over the machine's balance, the owner paid " + (pay - myMachine.getAmount()) + " directly out of their account.");
+							roller.sendMessage("The pay went over the machine's balance, so you only won " + iConomy.format(myMachine.getAmount()));
+							pay = myMachine.getAmount();
 							
 						} else {
 							
-							pay = myMachine.getAmount();
-							pay += eco.getBalance(myMachine.getOwner());
-							
-							eco.setAmount(roller, 0);
-							
-							roller.sendMessage(ChatColor.GREEN + "The pay went over the machine's balance and the owner's account balance, you only won " + pay);
+							if(eco.hasEnough(myMachine.getOwner(), pay - myMachine.getAmount())){
+								
+								eco.subtractAmount(myMachine.getOwner(), pay - myMachine.getAmount());
+								roller.sendMessage(ChatColor.GREEN + "The pay over the machine's balance, the owner paid " + iConomy.format(pay - myMachine.getAmount()) + " directly out of their account.");
+								
+							} else {
+								
+								pay = myMachine.getAmount();
+								pay += eco.getBalance(myMachine.getOwner());
+								
+								eco.setAmount(roller, 0);
+								
+								roller.sendMessage(ChatColor.GREEN + "The pay went over the machine's balance and the owner's account balance, you only won " + iConomy.format(pay));
+								
+							}
 							
 						}
 						
+						if(myMachine.isOwned())
+							myMachine.setAmount(0);
+						
+					} else {
+						
+						myMachine.subtractAmount(pay);
+						
+						roller.sendMessage(ChatColor.GREEN + "You won " + iConomy.format(pay) + " from the machine!");
+						
 					}
-					
-					myMachine.setAmount(0);
 					
 				} else {
 					
-					myMachine.subtractAmount(pay);
+					roller.sendMessage(ChatColor.GREEN + "You won " + iConomy.format(pay) + "from the machine!");
 					
 				}
-				
+					
 				eco.addAmount(roller, pay);
+				
+			} else {
+				
+				roller.sendMessage(ChatColor.GOLD + "Sorry, you didn't win.");
 				
 			}
 			
+			stopTask();
+			return;
+			
 		} else {
 			
-			String roll = generateRoll();
+			SlotRoll roll = generateRoll();
 			
-			rolls[currentRoll] = roll;
+			rolls[currentRoll] = roll.getName();
 			
-			roller.sendMessage(ChatColor.GOLD + "You rolled a " + roll + ".");
+			roller.sendMessage(ChatColor.GOLD + "You rolled a " + roll.getColor() + roll.getName() + ".");
+			
+			updateSign();
 			
 		}
 		
@@ -119,6 +142,35 @@ public class SlotRoller implements Runnable {
 		}
 		
 		currentRoll++;
+		
+	}
+	
+	public void updateSign(){
+		
+		Sign sign = (Sign)myMachine.getBlock().getState();
+		
+		String line = "";
+		
+		for(String roll: rolls){
+			
+			if(roll == null){
+				
+				line += " |";
+				
+			} else {
+			
+				SlotRoll slotroll = SlotsPlugin.getStatic().getDataHandler().getRoll(roll);
+			
+				line += slotroll.getColor() + slotroll.getSymbol() + ChatColor.BLACK + "|";
+				
+			}
+			
+		}
+		
+		line = line.substring(0, line.length() - 1);
+		
+		sign.setLine(2, line);
+		sign.update();
 		
 	}
 	
