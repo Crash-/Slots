@@ -76,9 +76,9 @@ public class SlotDataHandler {
 		
 	}
 	
-	private void addSlotRoll(String name, String symbol, double pay, int chancenum, int chanceden, int color){
+	private void addSlotRoll(String name, String symbol, double pay, int chance, int color){
 		
-		rollList.add(new SlotRoll(name, symbol, pay, chancenum, chanceden, color));
+		rollList.add(new SlotRoll(name, symbol, pay, chance, color));
 		
 	}
 	
@@ -119,6 +119,9 @@ public class SlotDataHandler {
 		config.load();
 		
 		List<String> keys = config.getKeys("machines");
+		
+		if(keys == null)
+			return;
 		
 		for(String key : keys){
 			
@@ -191,7 +194,7 @@ public class SlotDataHandler {
 			try {
 			
 				String name = key, symbol;
-				int num, den, color;
+				int chance, color;
 				double pay;
 				
 				symbol = config.getString(key + ".symbol");
@@ -201,16 +204,13 @@ public class SlotDataHandler {
 					continue;
 					
 				}
-				String fraction = config.getString(key + ".chance");
-				if(fraction == null){
+				chance = config.getInt(key + ".chance", -1);
+				if(chance == -1){
 					
 					System.out.println("[Slots] Roll " + key + " is missing a chance value.");
 					continue;
 					
 				}
-				String[] split = fraction.split("/");
-				num = Integer.parseInt(split[0]);
-				den = Integer.parseInt(split[1]);
 				color = config.getInt(key + ".color", -1);
 				if(color == -1){
 					
@@ -227,7 +227,7 @@ public class SlotDataHandler {
 					
 				}
 				
-				addSlotRoll(name, symbol, pay, num, den, color);
+				addSlotRoll(name, symbol, pay, chance, color);
 				
 			} catch(Exception e){
 				
@@ -248,7 +248,7 @@ public class SlotDataHandler {
 			String name = roll.getName();
 			
 			config.setProperty(name + ".symbol", roll.getSymbol());
-			config.setProperty(name + ".chance", roll.getNumerator() + "/" + roll.getDenominator());
+			config.setProperty(name + ".chance", roll.getChancePercent());
 			config.setProperty(name + ".color", roll.getColorCode());
 			config.setProperty(name + ".pay", roll.getPay());
 			

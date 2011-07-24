@@ -169,7 +169,7 @@ public class SlotRoller implements Runnable {
 			
 			if(roll == null){
 				
-				line += " |";
+				line += "  |";
 				
 			} else {
 			

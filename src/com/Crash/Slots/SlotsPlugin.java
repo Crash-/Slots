@@ -85,7 +85,7 @@ public class SlotsPlugin extends JavaPlugin {
 		rollSaveFile = new File("plugins/Slots/rolls.yml");
 		slotConfigFile = new File("plugins/Slots/config.yml");
 		
-		if(new File("plugins/Slots/").mkdir())
+		if(getDataFolder().mkdir())
 			outConsole("Created Slots directory.");
 		
 		if(!slotSaveFile.exists())
@@ -178,7 +178,7 @@ public class SlotsPlugin extends JavaPlugin {
 	
 	public boolean has(Player player, String perm){
 		
-		return Permissions.has(player, perm);
+		return usingPermissions() ? Permissions.has(player, perm) : player.isOp();
 		
 	}
 	
@@ -187,6 +187,8 @@ public class SlotsPlugin extends JavaPlugin {
 		
 		if(!(sender instanceof Player))
 			return false;
+		
+		System.out.println(sender.toString());
 		
 		Player player = (Player)sender;
 		

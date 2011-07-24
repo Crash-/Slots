@@ -77,6 +77,8 @@ public class SlotMachine {
 		
 		slotroller.setID(SlotsPlugin.getStatic().getServer().getScheduler().scheduleSyncRepeatingTask(SlotsPlugin.getStatic(), slotroller, delay, delay));
 		
+		slotroller.updateSign();
+		
 		uses++;
 		
 	}

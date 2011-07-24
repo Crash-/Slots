@@ -6,15 +6,14 @@ public class SlotRoll {
 	
 	private String name, symbol;
 	private double pay;
-	private int chancenum, chanceden, color;
+	private int chance, color;
 	
-	public SlotRoll(String Name, String Symbol, double Pay, int Chancenum, int Chanceden, int Color){
+	public SlotRoll(String Name, String Symbol, double Pay, int Chance, int Color){
 		
 		name = Name;
 		symbol = Symbol;
 		pay = Pay;
-		chancenum = Chancenum;
-		chanceden = Chanceden;
+		chance = Chance;
 		color = Color;
 		
 	}
@@ -25,11 +24,9 @@ public class SlotRoll {
 	
 	public double getPay(){ return pay; }
 	
-	public double getChance(){ return (double)chancenum / chanceden; }
-
-	public int getNumerator(){ return chancenum; }
+	public double getChance(){ return chance / (double)100; }
 	
-	public int getDenominator(){ return chanceden; }
+	public int getChancePercent(){ return chance; }
 	
 	public int getColorCode(){ return color; }
 	
