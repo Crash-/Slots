@@ -1,6 +1,10 @@
 package com.Crash.Slots;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -91,8 +95,28 @@ public class SlotsPlugin extends JavaPlugin {
 		if(!slotSaveFile.exists())
 			try { slotSaveFile.createNewFile(); } catch(Exception e){ outConsole("Error creating slot save file."); }
 			
-		if(!rollSaveFile.exists())
+		if(!rollSaveFile.exists()){
+			
 			try { rollSaveFile.createNewFile(); } catch(Exception e){ outConsole("Error creating roll save file."); }
+
+			InputStream is = SlotsPlugin.class.getResourceAsStream("rolls.yml");
+			
+			try {
+				
+				FileOutputStream out = new FileOutputStream(rollSaveFile);
+				int len;
+				byte[] bytes = new byte[2000];
+				
+				while((len = is.read(bytes)) > 0)
+					out.write(bytes, 0, len);	
+				
+			} catch (FileNotFoundException e) {
+				outConsole(Level.SEVERE, "Could not find rolls file in Slots folder!");
+			} catch (IOException e) {
+				outConsole(Level.SEVERE, "Error when writing the default rolls file.");
+			}
+			
+		}
 				
 		if(!slotConfigFile.exists()){
 			
@@ -153,10 +177,10 @@ public class SlotsPlugin extends JavaPlugin {
 	public void saveAllData(){
 		
 		DataHandler.saveSlotData(slotSaveFile);
-		DataHandler.saveRollData(rollSaveFile);
-		Settings.saveSlotSettings(slotConfigFile);
+		//DataHandler.saveRollData(rollSaveFile);
+		//Settings.saveSlotSettings(slotConfigFile);
 		
-		outConsole("All data saved.");
+		outConsole("All slot data saved.");
 		
 	}
 	
@@ -221,7 +245,7 @@ public class SlotsPlugin extends JavaPlugin {
 			
 		} else if(args[0].equals("deposit")){
 			
-			if(args.length == 1)
+			if(args.length == 1 || Settings.linkedToAccounts())
 				return false;
 			
 			PlayerState state = PlayerState.DEPOSIT;
@@ -247,7 +271,7 @@ public class SlotsPlugin extends JavaPlugin {
 			
 		} else if(args[0].equals("withdraw")){
 			
-			if(args.length == 1)
+			if(args.length == 1 || Settings.linkedToAccounts())
 				return false;
 			
 			PlayerState state = PlayerState.WITHDRAW;
@@ -424,7 +448,7 @@ class PListener extends PlayerListener {
 					
 					try {
 						
-						pay = Double.parseDouble(sign.getLine(1));
+						pay = Double.parseDouble(sign.getLine(1).replaceAll("$", ""));
 						
 					} catch(NumberFormatException e){
 						
@@ -475,7 +499,7 @@ class PListener extends PlayerListener {
 					
 					Player p = event.getPlayer();
 					
-					if(!plugin.has(p, "slots.withdraw")){
+					if(!plugin.has(p, "slots.info")){
 						
 						p.sendMessage(ChatColor.RED + "You aren't allowed to get info on slot machines!");
 						return;

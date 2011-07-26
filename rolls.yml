@@ -1,0 +1,25 @@
+ChaChing:
+  symbol: C
+  color: 4
+  pay: 30.0
+  chance: 43
+Lucky Leprechaun:
+  symbol: L
+  color: 2
+  pay: 100.0
+  chance: 15
+Jackpot:
+  symbol: J
+  color: 6
+  pay: 1000.0
+  chance: 2
+Diamond:
+  symbol: D
+  color: 11
+  pay: 125.0
+  chance: 18
+King:
+  symbol: K
+  color: 5
+  pay: 150.0
+  chance: 22
