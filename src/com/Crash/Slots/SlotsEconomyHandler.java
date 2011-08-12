@@ -2,14 +2,18 @@ package com.Crash.Slots;
 
 import org.bukkit.entity.Player;
 
-import com.iConomy.iConomy;
-import com.iConomy.system.Account;
+import com.nijikokun.register.payment.Method;
+import com.nijikokun.register.payment.Method.MethodAccount;
 
 public class SlotsEconomyHandler {
 
+	private Method method;
+	
+	public void setMethod(Method m){ method = m; }
+	
 	public boolean accountExists(String player){
 		
-		return iConomy.hasAccount(player);
+		return method.hasAccount(player);
 		
 	}
 	
@@ -24,9 +28,9 @@ public class SlotsEconomyHandler {
 		if(!accountExists(player))
 			return false;
 		
-		Account acc = iConomy.getAccount(player);
+		MethodAccount acc = method.getAccount(player);
 		
-		return acc.getHoldings().hasEnough(amount);
+		return acc.hasEnough(amount);
 		
 	}
 	
@@ -41,9 +45,9 @@ public class SlotsEconomyHandler {
 		if(!accountExists(player))
 			return -1;
 		
-		Account acc = iConomy.getAccount(player);
+		MethodAccount acc = method.getAccount(player);
 		
-		return acc.getHoldings().balance();
+		return acc.balance();
 		
 	}
 	
@@ -58,9 +62,9 @@ public class SlotsEconomyHandler {
 		if(!accountExists(player))
 			return;
 		
-		Account acc = iConomy.getAccount(player);
+		MethodAccount acc = method.getAccount(player);
 		
-		acc.getHoldings().add(amount);
+		acc.add(amount);
 		
 	}
 	
@@ -75,9 +79,9 @@ public class SlotsEconomyHandler {
 		if(!accountExists(player))
 			return;
 		
-		Account acc = iConomy.getAccount(player);
+		MethodAccount acc = method.getAccount(player);
 		
-		acc.getHoldings().subtract(amount);
+		acc.subtract(amount);
 		
 	}
 	
@@ -92,15 +96,21 @@ public class SlotsEconomyHandler {
 		if(!accountExists(player))
 			return;
 		
-		Account acc = iConomy.getAccount(player);
+		MethodAccount acc = method.getAccount(player);
 		
-		acc.getHoldings().set(0);
+		acc.set(amount);
 		
 	}
 	
 	public void setAmount(Player player, double amount){
 		
 		setAmount(player.getName(), amount);
+		
+	}
+	
+	public String format(double amt){
+		
+		return method.format(amt);
 		
 	}
 	

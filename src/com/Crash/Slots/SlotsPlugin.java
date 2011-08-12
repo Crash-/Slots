@@ -10,6 +10,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
@@ -22,14 +23,16 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockListener;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerListener;
+import org.bukkit.event.server.PluginEnableEvent;
+import org.bukkit.event.server.ServerListener;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import com.Crash.Slots.SlotsPlugin.PlayerState;
-import com.iConomy.iConomy;
 import com.nijiko.permissions.PermissionHandler;
+import com.nijikokun.register.payment.Methods;
 
 public class SlotsPlugin extends JavaPlugin {
 
@@ -38,10 +41,12 @@ public class SlotsPlugin extends JavaPlugin {
 	private HashMap<String, PlayerState> playerState = new HashMap<String, PlayerState>();
 	private BListener BlockListener = null;
 	private PListener PlayerListener = null;
+	private SListener ServerListener = null;
 	private SlotDataHandler DataHandler = null;
 	private SlotSettings Settings = null;
 	private SlotsEconomyHandler EconomyHandler = null;
 	private PermissionHandler Permissions = null;
+	private Methods methods = new Methods();
 	private File slotSaveFile = null, slotConfigFile = null, rollSaveFile = null;
 	
 	public static void outConsole(String s){
@@ -79,6 +84,8 @@ public class SlotsPlugin extends JavaPlugin {
 		
 		BlockListener = new BListener();
 		
+		ServerListener = new SListener(this);
+		
 		PlayerListener = new PListener();
 		
 		PluginManager pm = getServer().getPluginManager();
@@ -99,7 +106,7 @@ public class SlotsPlugin extends JavaPlugin {
 			
 			try { rollSaveFile.createNewFile(); } catch(Exception e){ outConsole("Error creating roll save file."); }
 
-			InputStream is = SlotsPlugin.class.getResourceAsStream("rolls.yml");
+			InputStream is = this.getClass().getResourceAsStream("/rolls.yml");
 			
 			try {
 				
@@ -117,7 +124,7 @@ public class SlotsPlugin extends JavaPlugin {
 			}
 			
 		}
-				
+		
 		if(!slotConfigFile.exists()){
 			
 			try { slotConfigFile.createNewFile(); } catch(Exception e){ outConsole("Error creating slot config file."); }
@@ -133,22 +140,16 @@ public class SlotsPlugin extends JavaPlugin {
 			
 		if(PermissionsPlugin == null)
 			outConsole("Unable to find Permissions, using OP only.");
-		else 
+		else {
+			
 			Permissions = ((com.nijikokun.bukkit.Permissions.Permissions)PermissionsPlugin).getHandler();
-		
-		Plugin iConomyPlugin = pm.getPlugin("iConomy");
-		
-		if(iConomyPlugin == null){
+			outConsole("Hooked Permissions successfully.");
 			
-			outConsole("Unable to find iConomy, disabling.");
-			pm.disablePlugin(this);
-			return;
-			
-		} else if(PermissionsPlugin != null)
-			outConsole("Hooked iConomy and Permissions successfully.");
+		}
 		
 		getServer().getPluginManager().registerEvent(Event.Type.BLOCK_BREAK, BlockListener, Event.Priority.Normal, this);
 		getServer().getPluginManager().registerEvent(Event.Type.PLAYER_INTERACT, PlayerListener, Event.Priority.Normal, this);
+		getServer().getPluginManager().registerEvent(Event.Type.PLUGIN_ENABLE, ServerListener, Event.Priority.Normal, this);
 		
 		loadAllData();
 		
@@ -196,6 +197,8 @@ public class SlotsPlugin extends JavaPlugin {
 	
 	public SlotsEconomyHandler getEconomyHandler(){ return EconomyHandler; }
 	
+	public Methods getMethods(){ return methods; }
+	
 	public static SlotsPlugin getStatic(){ return staticPlugin; }
 	
 	public boolean usingPermissions(){ return Permissions != null; }
@@ -211,8 +214,6 @@ public class SlotsPlugin extends JavaPlugin {
 		
 		if(!(sender instanceof Player))
 			return false;
-		
-		System.out.println(sender.toString());
 		
 		Player player = (Player)sender;
 		
@@ -315,6 +316,14 @@ public class SlotsPlugin extends JavaPlugin {
 				return false;
 				
 			}
+			
+			DataHandler = new SlotDataHandler();
+			
+			Settings = new SlotSettings();
+			
+			EconomyHandler = new SlotsEconomyHandler();
+			
+			playerState = new HashMap<String, PlayerState>();
 			
 			loadAllData();
 			player.sendMessage(ChatColor.GREEN + "Loaded data successfully.");
@@ -428,7 +437,7 @@ class PListener extends PlayerListener {
 					if(!sign.getLine(0).equalsIgnoreCase("[Slots]"))
 						return;
 					
-					if(state == PlayerState.CREATE && !plugin.has(event.getPlayer(), "slot.create")){
+					if(state == PlayerState.CREATE && !plugin.has(event.getPlayer(), "slots.create")){
 						
 						event.getPlayer().sendMessage(ChatColor.RED + "You aren't allowed to make slot machines!");
 						event.setCancelled(true);
@@ -509,12 +518,14 @@ class PListener extends PlayerListener {
 					if(m.isOwned()){
 					
 						p.sendMessage(ChatColor.GOLD + "Owner : " + m.getOwner());
-						p.sendMessage(ChatColor.GOLD + "Balance : " + m.getAmount());
+						if(!plugin.getSettings().linkedToAccounts())
+							p.sendMessage(ChatColor.GOLD + "Balance : " + m.getAmount());
 						
 					} else {
 						
 						p.sendMessage(ChatColor.GOLD + "Owner : Server");
-						p.sendMessage(ChatColor.GOLD + "Balance : <infinite>");
+						if(!plugin.getSettings().linkedToAccounts())
+							p.sendMessage(ChatColor.GOLD + "Balance : <infinite>");
 						
 					}
 					
@@ -557,7 +568,7 @@ class PListener extends PlayerListener {
 					
 					m.addAmount(amount);
 					
-					event.getPlayer().sendMessage(ChatColor.GREEN + iConomy.format(amount) + " has been deposited into your slot machine.");
+					event.getPlayer().sendMessage(ChatColor.GREEN + plugin.getMethods().getMethod().format(amount) + " has been deposited into your slot machine.");
 					
 				} else if(state == PlayerState.WITHDRAW){
 					
@@ -595,7 +606,7 @@ class PListener extends PlayerListener {
 					
 					m.subtractAmount(amount);
 					
-					event.getPlayer().sendMessage(ChatColor.GREEN + "You withdrew " + iConomy.format(amount) + " from the machine.");
+					event.getPlayer().sendMessage(ChatColor.GREEN + "You withdrew " + plugin.getMethods().getMethod().format(amount) + " from the machine.");
 					
 				}
 				
@@ -640,4 +651,29 @@ class BListener extends BlockListener {
 		
 	}
 	
+}
+
+class SListener extends ServerListener {
+
+    private SlotsPlugin plugin;
+
+    public SListener(SlotsPlugin instance) {
+    	
+        plugin = instance;
+        
+    }
+
+    @Override
+    public void onPluginEnable(PluginEnableEvent event) {
+        // Check to see if we need a payment method
+        if (!plugin.getMethods().hasMethod()) {
+            if(plugin.getMethods().setMethod(event.getPlugin())) {
+                
+            	plugin.getEconomyHandler().setMethod(plugin.getMethods().getMethod());
+            	
+                System.out.println("[Slots] Payment method found [" + plugin.getMethods().getMethod().getName() + " ver : " + plugin.getMethods().getMethod().getVersion() + "]");
+                
+            }
+        }
+    }
 }

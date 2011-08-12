@@ -157,7 +157,7 @@ public class SlotDataHandler {
 				
 				try {
 					
-					String line = ((Sign)block.getState()).getLine(1);
+					String line = ((Sign)block.getState()).getLine(1).replaceAll("$", "");
 					cost = Double.parseDouble(line);
 					
 				} catch(NumberFormatException e){

@@ -6,8 +6,6 @@ import org.bukkit.ChatColor;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.Player;
 
-import com.iConomy.iConomy;
-
 public class SlotRoller implements Runnable {
 
 	private String[] rolls = new String[3];
@@ -67,8 +65,8 @@ public class SlotRoller implements Runnable {
 
 				dealWinnings(pay);
 
-				roller.sendMessage(ChatColor.GOLD + "You now have " + ChatColor.WHITE + iConomy.format(eco.getBalance(roller)) + ChatColor.GOLD + ".");
-				
+				roller.sendMessage(ChatColor.GOLD + "You now have " + ChatColor.WHITE + eco.format(eco.getBalance(roller)) + ChatColor.GOLD + ".");
+
 			} else {//It's not a three in a row
 
 				if(SlotsPlugin.getStatic().getSettings().partialRollWin() && (rolls[0].equals(rolls[1]) || rolls[1].equals(rolls[2]))){//Check if you're using partial rolls and if there's two in a row
@@ -91,17 +89,17 @@ public class SlotRoller implements Runnable {
 					pay *= SlotsPlugin.getStatic().getSettings().getPartialRollWinMultiplier();
 
 					dealWinnings(pay);
-					
-					roller.sendMessage(ChatColor.GOLD + "You now have " + ChatColor.WHITE + iConomy.format(eco.getBalance(roller)) + ChatColor.GOLD + ".");
-					
+
+					roller.sendMessage(ChatColor.GOLD + "You now have " + ChatColor.WHITE + eco.format(eco.getBalance(roller)) + ChatColor.GOLD + ".");
+
 				} else {//If not you won nothing
 
-					roller.sendMessage(ChatColor.GOLD + "Sorry, you didn't win.");
+					roller.sendMessage(ChatColor.GOLD + "Sorry, you didn't win. You now have " + ChatColor.WHITE + eco.format(eco.getBalance(roller)) + ChatColor.GOLD + ".");
 
 				}
 
 			}
-			
+
 			stopTask();
 			return;
 
@@ -144,52 +142,75 @@ public class SlotRoller implements Runnable {
 
 		SlotsEconomyHandler eco = SlotsPlugin.getStatic().getEconomyHandler();
 
-		if(myMachine.isOwned()){//Is a player owned machine
+		if(!SlotsPlugin.getStatic().getSettings().linkedToAccounts()){
 
-			if(pay > myMachine.getAmount()){//If it goes over the amount in the machine
+			if(myMachine.isOwned()){//Is a player owned machine
 
-				roller.sendMessage(ChatColor.GREEN + "Congratulations you won!");
+				if(pay > myMachine.getAmount()){//If it goes over the amount in the machine
 
-				if(!SlotsPlugin.getStatic().getSettings().subtractOvercost()){//If it shouldn't subtract the remainder from the person's account
+					roller.sendMessage(ChatColor.GREEN + "Congratulations you won!");
 
-					roller.sendMessage("The pay went over the machine's balance, so you only won " + iConomy.format(myMachine.getAmount()));
-					pay = myMachine.getAmount();
+					if(!SlotsPlugin.getStatic().getSettings().subtractOvercost()){//If it shouldn't subtract the remainder from the person's account
 
-				} else {//It should subtract the remainder
-
-					if(eco.hasEnough(myMachine.getOwner(), pay - myMachine.getAmount())){//If the person has enough money in their account
-
-						eco.subtractAmount(myMachine.getOwner(), pay - myMachine.getAmount());
-						roller.sendMessage(ChatColor.GREEN + "The pay over the machine's balance, the owner paid " + iConomy.format(pay - myMachine.getAmount()) + " directly out of their account.");
-
-					} else {//The person doesn't have enough
-
+						roller.sendMessage("The pay went over the machine's balance, so you only won " + eco.format(myMachine.getAmount()));
 						pay = myMachine.getAmount();
-						pay += eco.getBalance(myMachine.getOwner());
 
-						eco.setAmount(myMachine.getOwner(), 0);
+					} else {//It should subtract the remainder
 
-						roller.sendMessage(ChatColor.GREEN + "The pay went over the machine's balance and the owner's account balance, you only won " + iConomy.format(pay));
+						if(eco.hasEnough(myMachine.getOwner(), pay - myMachine.getAmount())){//If the person has enough money in their account
+
+							eco.subtractAmount(myMachine.getOwner(), pay - myMachine.getAmount());
+							roller.sendMessage(ChatColor.GREEN + "The pay over the machine's balance, the owner paid " + eco.format(pay - myMachine.getAmount()) + " directly out of their account.");
+
+						} else {//The person doesn't have enough
+
+							pay = myMachine.getAmount();
+							pay += eco.getBalance(myMachine.getOwner());
+
+							eco.setAmount(myMachine.getOwner(), 0);
+
+							roller.sendMessage(ChatColor.GREEN + "The pay went over the machine's balance and the owner's account balance, you only won " + eco.format(pay));
+
+						}
 
 					}
 
+					if(myMachine.isOwned())
+						myMachine.setAmount(0);
+
+				} else {//If it didn't go over the amount
+
+					myMachine.subtractAmount(pay);
+
+					roller.sendMessage(ChatColor.GREEN + "You won " + eco.format(pay) + " from the machine!");
+
 				}
 
-				if(myMachine.isOwned())
-					myMachine.setAmount(0);
+			} else {//If it's a server owned slot machine
 
-			} else {//If it didn't go over the amount
-
-				myMachine.subtractAmount(pay);
-
-				roller.sendMessage(ChatColor.GREEN + "You won " + iConomy.format(pay) + " from the machine!");
+				roller.sendMessage(ChatColor.GREEN + "You won " + eco.format(pay) + " from the machine!");
 
 			}
 
-		} else {//If it's a server owned slot machine
-
-			roller.sendMessage(ChatColor.GREEN + "You won " + iConomy.format(pay) + " from the machine!");
-
+		} else {
+			
+			if(myMachine.isOwned()){
+				
+				if(pay > eco.getBalance(myMachine.getOwner())){
+					
+					pay = eco.getBalance(myMachine.getOwner());
+					roller.sendMessage(ChatColor.GREEN + "The pay went over the owner's account balance, you only won " + eco.format(pay) + ".");
+					eco.setAmount(myMachine.getOwner(), 0);
+					
+				} else {
+					
+					roller.sendMessage(ChatColor.GREEN + "You won " + eco.format(pay) + " from the machine!");
+					eco.subtractAmount(myMachine.getOwner(), pay);
+					
+				}
+				
+			}
+			
 		}
 
 		eco.addAmount(roller, pay);//Add to the account
